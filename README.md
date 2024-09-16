@@ -2,6 +2,13 @@
 # y-websocket :tophat:
 > WebSocket Provider for Yjs
 
+## We.Team
+
+Removed ModuleScopePlugin from `/Users/jamie/Documents/GitHub/my-app-5/node_modules/react-scripts/config/webpack.config.js`so we could import from outside ./src
+
+
+
+
 The Websocket Provider implements a classical client server model. Clients
 connect to a single endpoint over Websocket. The server distributes awareness
 information and document updates among clients.

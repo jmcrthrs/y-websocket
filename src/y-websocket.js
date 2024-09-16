@@ -129,8 +129,8 @@ const readMessage = (provider, buf, emitSynced) => {
  */
 const setupWS = (provider) => {
   if (provider.shouldConnect && provider.ws === null) {
-    //const websocket = new provider._WS(provider.url, provider.protocols)
-    const websocket = provider.customWebsocket
+    const websocket = new provider._WS(provider.url, provider.protocols)
+    //const websocket = provider.customWebsocket
     websocket.binaryType = 'arraybuffer'
     provider.ws = websocket
     provider.wsconnecting = true
@@ -141,6 +141,9 @@ const setupWS = (provider) => {
       provider.wsLastMessageReceived = time.getUnixTime()
       const encoder = readMessage(provider, new Uint8Array(event.data), true)
       if (encoding.length(encoder) > 1) {
+        /**
+         * CALL OUR OWN FUNCTION INSTEAD OF THE WEBSOCKET
+         */
         websocket.send(encoding.toUint8Array(encoder))
       }
     }
@@ -191,6 +194,9 @@ const setupWS = (provider) => {
       const encoder = encoding.createEncoder()
       encoding.writeVarUint(encoder, messageSync)
       syncProtocol.writeSyncStep1(encoder, provider.doc)
+      /**
+       * CALL OUR OWN FUNCTION HERE
+       */
       websocket.send(encoding.toUint8Array(encoder))
       // broadcast local awareness state
       if (provider.awareness.getLocalState() !== null) {
@@ -202,6 +208,9 @@ const setupWS = (provider) => {
             provider.doc.clientID
           ])
         )
+        /**
+         * CALL OUR OWN FUNCTION HERE
+         */
         websocket.send(encoding.toUint8Array(encoderAwarenessState))
       }
     }
@@ -216,6 +225,10 @@ const setupWS = (provider) => {
  * @param {ArrayBuffer} buf
  */
 const broadcastMessage = (provider, buf) => {
+  /**
+   * INSTEAD OF SENDING ON THE WS, CALL A FUNCTION FROM OUR APPLICATION
+   * THAT SENDS THE MESSAGE ON WEBSOCKET
+   */
   const ws = provider.ws
   if (provider.wsconnected && ws && ws.readyState === ws.OPEN) {
     ws.send(buf)
