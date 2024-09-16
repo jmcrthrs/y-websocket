@@ -6,8 +6,11 @@
 
 Removed ModuleScopePlugin from `/Users/jamie/Documents/GitHub/my-app-5/node_modules/react-scripts/config/webpack.config.js`so we could import from outside ./src
 
+### Websocket Server
 
+When using the y-websocket server, the other user awareness shows when you load the app. This is because the y-websocket server stores the YDoc and sends the info to the client when it connects
 
+When using our websocket, the other user awareness does not show
 
 The Websocket Provider implements a classical client server model. Clients
 connect to a single endpoint over Websocket. The server distributes awareness

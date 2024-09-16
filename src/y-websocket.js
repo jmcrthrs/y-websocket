@@ -147,14 +147,14 @@ export const handleWebSocketClose = (provider, websocket) => {
   }
   // Start with no reconnect timeout and increase timeout by
   // using exponential backoff starting with 100ms
-  setTimeout(
-    setupWS,
-    math.min(
-      math.pow(2, provider.wsUnsuccessfulReconnects) * 100,
-      provider.maxBackoffTime
-    ),
-    provider
-  )
+  // setTimeout(
+  //   setupWS,
+  //   math.min(
+  //     math.pow(2, provider.wsUnsuccessfulReconnects) * 100,
+  //     provider.maxBackoffTime
+  //   ),
+  //   provider
+  // )
 }
 
 export const handleWebSocketOpen = (provider, websocket) => {  
@@ -207,33 +207,33 @@ export const handleWebSocketMessage = (provider, event) => {
 /**
  * @param {WebsocketProvider} provider
  */
-const setupWS = (provider) => {
-  if (provider.shouldConnect && provider.ws === null) {
-    const websocket = new provider._WS(provider.url, provider.protocols)
-    //const websocket = provider.customWebsocket
-    websocket.binaryType = 'arraybuffer'
-    provider.ws = websocket
-    provider.wsconnecting = true
-    provider.wsconnected = false
-    provider.synced = false
+// const setupWS = (provider) => {
+//   if (provider.shouldConnect && provider.ws === null) {
+//     const websocket = new provider._WS(provider.url, provider.protocols)
+//     //const websocket = provider.customWebsocket
+//     websocket.binaryType = 'arraybuffer'
+//     provider.ws = websocket
+//     provider.wsconnecting = true
+//     provider.wsconnected = false
+//     provider.synced = false
 
-    websocket.onmessage = (event) => {
-      //handleWebSocketMessage(provider, event)
-    }
-    websocket.onerror = (event) => {
-      provider.emit('connection-error', [event, provider])
-    }
-    websocket.onclose = (event) => {
-      handleWebSocketClose(provider, websocket)
-    }
-    websocket.onopen = () => {
-      //handleWebSocketOpen(provider, websocket)
-    }
-    provider.emit('status', [{
-      status: 'connecting'
-    }])
-  }
-}
+//     websocket.onmessage = (event) => {
+//       //handleWebSocketMessage(provider, event)
+//     }
+//     websocket.onerror = (event) => {
+//       provider.emit('connection-error', [event, provider])
+//     }
+//     websocket.onclose = (event) => {
+//       handleWebSocketClose(provider, websocket)
+//     }
+//     websocket.onopen = () => {
+//       //handleWebSocketOpen(provider, websocket)
+//     }
+//     provider.emit('status', [{
+//       status: 'connecting'
+//     }])
+//   }
+// }
 
 /**
  * @param {WebsocketProvider} provider
@@ -412,7 +412,7 @@ export class WebsocketProvider extends Observable {
       }
     }, messageReconnectTimeout / 10))
     if (connect) {
-      //this.connect()
+      this.connect()
     }
   }
 
@@ -522,7 +522,7 @@ export class WebsocketProvider extends Observable {
   connect () {
     this.shouldConnect = true
     if (!this.wsconnected && this.ws === null) {
-      setupWS(this)
+      //setupWS(this)
       this.connectBc()
     }
   }
