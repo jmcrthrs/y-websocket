@@ -129,7 +129,8 @@ const readMessage = (provider, buf, emitSynced) => {
  */
 const setupWS = (provider) => {
   if (provider.shouldConnect && provider.ws === null) {
-    const websocket = new provider._WS(provider.url, provider.protocols)
+    //const websocket = new provider._WS(provider.url, provider.protocols)
+    const websocket = provider.customWebsocket
     websocket.binaryType = 'arraybuffer'
     provider.ws = websocket
     provider.wsconnecting = true
@@ -260,9 +261,12 @@ export class WebsocketProvider extends Observable {
     WebSocketPolyfill = WebSocket,
     resyncInterval = -1,
     maxBackoffTime = 2500,
-    disableBc = false
+    disableBc = false,
+    customWebsocket
   } = {}) {
     super()
+    console.log(customWebsocket);
+    
     // ensure that url is always ends with /
     while (serverUrl[serverUrl.length - 1] === '/') {
       serverUrl = serverUrl.slice(0, serverUrl.length - 1)
@@ -275,6 +279,7 @@ export class WebsocketProvider extends Observable {
      * when a new connection is established.
      * @type {Object<string,string>}
      */
+    this.customWebsocket = customWebsocket
     this.params = params
     this.protocols = protocols
     this.roomname = roomname
