@@ -95,8 +95,6 @@ messageHandlers[messageAuth] = (
   )
 }
 
-// @todo - this should depend on awareness.outdatedTime
-const messageReconnectTimeout = 30000
 
 /**
  * @param {WebsocketProvider} provider
@@ -126,10 +124,7 @@ const readMessage = (provider, buf, emitSynced) => {
 
 export const handleWebSocketClose = (provider, websocket) => {
   provider.emit('connection-close', [event, provider])
-  provider.ws = null
-  provider.wsconnecting = false
   if (provider.wsconnected) {
-    provider.wsconnected = false
     provider.synced = false
     // update awareness (all users except local left)
     awarenessProtocol.removeAwarenessStates(
@@ -142,26 +137,10 @@ export const handleWebSocketClose = (provider, websocket) => {
     provider.emit('status', [{
       status: 'disconnected'
     }])
-  } else {
-    provider.wsUnsuccessfulReconnects++
   }
-  // Start with no reconnect timeout and increase timeout by
-  // using exponential backoff starting with 100ms
-  // setTimeout(
-  //   setupWS,
-  //   math.min(
-  //     math.pow(2, provider.wsUnsuccessfulReconnects) * 100,
-  //     provider.maxBackoffTime
-  //   ),
-  //   provider
-  // )
 }
 
 export const handleWebSocketOpen = (provider, websocket) => {  
-  provider.wsLastMessageReceived = time.getUnixTime()
-  provider.wsconnecting = false
-  provider.wsconnected = true
-  provider.wsUnsuccessfulReconnects = 0
   provider.emit('status', [{
     status: 'connected'
   }])
@@ -169,10 +148,6 @@ export const handleWebSocketOpen = (provider, websocket) => {
   const encoder = encoding.createEncoder()
   encoding.writeVarUint(encoder, messageSync)
   syncProtocol.writeSyncStep1(encoder, provider.doc)
-  /**
-   * CALL OUR OWN FUNCTION HERE
-   */
-  //websocket.send(encoding.toUint8Array(encoder))
   if (provider.customSend) {
     provider.customSend(encoding.toUint8Array(encoder))
   }
@@ -189,51 +164,17 @@ export const handleWebSocketOpen = (provider, websocket) => {
     if (provider.customSend) {
       provider.customSend(encoding.toUint8Array(encoderAwarenessState))
     }
-    //websocket.send(encoding.toUint8Array(encoderAwarenessState))
   }
 }
 
-export const handleWebSocketMessage = (provider, event) => {
-  provider.wsLastMessageReceived = time.getUnixTime()
+export const handleWebSocketMessage = (provider, event) => {  
   const encoder = readMessage(provider, new Uint8Array(event.data), true)
   if (encoding.length(encoder) > 1) {
     if (provider.customSend) {
       provider.customSend(encoding.toUint8Array(encoder))
     }
-    //provider.ws.send(encoding.toUint8Array(encoder))
   }
 }
-
-/**
- * @param {WebsocketProvider} provider
- */
-// const setupWS = (provider) => {
-//   if (provider.shouldConnect && provider.ws === null) {
-//     const websocket = new provider._WS(provider.url, provider.protocols)
-//     //const websocket = provider.customWebsocket
-//     websocket.binaryType = 'arraybuffer'
-//     provider.ws = websocket
-//     provider.wsconnecting = true
-//     provider.wsconnected = false
-//     provider.synced = false
-
-//     websocket.onmessage = (event) => {
-//       //handleWebSocketMessage(provider, event)
-//     }
-//     websocket.onerror = (event) => {
-//       provider.emit('connection-error', [event, provider])
-//     }
-//     websocket.onclose = (event) => {
-//       handleWebSocketClose(provider, websocket)
-//     }
-//     websocket.onopen = () => {
-//       //handleWebSocketOpen(provider, websocket)
-//     }
-//     provider.emit('status', [{
-//       status: 'connecting'
-//     }])
-//   }
-// }
 
 /**
  * @param {WebsocketProvider} provider
@@ -242,10 +183,6 @@ export const handleWebSocketMessage = (provider, event) => {
 const broadcastMessage = (provider, buf) => {
   if (provider.customSend) {
     provider.customSend(buf)
-  }
-  const ws = provider.ws
-  if (provider.wsconnected && ws && ws.readyState === ws.OPEN) {
-    //ws.send(buf)
   }
   if (provider.bcconnected) {
     bc.publish(provider.bcChannel, buf, provider)
@@ -293,61 +230,28 @@ export class WebsocketProvider extends Observable {
   } = {}) {
     super()
     
-    // ensure that url is always ends with /
-    while (serverUrl[serverUrl.length - 1] === '/') {
-      serverUrl = serverUrl.slice(0, serverUrl.length - 1)
-    }
-    this.serverUrl = serverUrl
-    this.bcChannel = serverUrl + '/' + roomname
-    this.maxBackoffTime = maxBackoffTime
+    this.bcChannel = roomname
     /**
      * The specified url parameters. This can be safely updated. The changed parameters will be used
      * when a new connection is established.
      * @type {Object<string,string>}
      */
     this.customSend = customSend
-    this.params = params
-    this.protocols = protocols
     this.roomname = roomname
     this.doc = doc
-    this._WS = WebSocketPolyfill
     this.awareness = awareness
-    this.wsconnected = false
-    this.wsconnecting = false
     this.bcconnected = false
     this.disableBc = disableBc
-    this.wsUnsuccessfulReconnects = 0
     this.messageHandlers = messageHandlers.slice()
     /**
      * @type {boolean}
      */
     this._synced = false
     /**
-     * @type {WebSocket?}
-     */
-    this.ws = null
-    this.wsLastMessageReceived = 0
-    /**
      * Whether to connect to other peers or not
      * @type {boolean}
      */
     this.shouldConnect = connect
-
-    /**
-     * @type {number}
-     */
-    this._resyncInterval = 0
-    if (resyncInterval > 0) {
-      this._resyncInterval = /** @type {any} */ (setInterval(() => {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-          // resend sync step 1
-          const encoder = encoding.createEncoder()
-          encoding.writeVarUint(encoder, messageSync)
-          syncProtocol.writeSyncStep1(encoder, doc)
-          this.ws.send(encoding.toUint8Array(encoder))
-        }
-      }, resyncInterval))
-    }
 
     /**
      * @param {ArrayBuffer} data
@@ -389,37 +293,12 @@ export class WebsocketProvider extends Observable {
       )
       broadcastMessage(this, encoding.toUint8Array(encoder))
     }
-    this._exitHandler = () => {
-      awarenessProtocol.removeAwarenessStates(
-        this.awareness,
-        [doc.clientID],
-        'app closed'
-      )
-    }
-    if (env.isNode && typeof process !== 'undefined') {
-      process.on('exit', this._exitHandler)
-    }
+   
     awareness.on('update', this._awarenessUpdateHandler)
-    this._checkInterval = /** @type {any} */ (setInterval(() => {
-      if (
-        this.wsconnected &&
-        messageReconnectTimeout <
-          time.getUnixTime() - this.wsLastMessageReceived
-      ) {
-        // no message received in a long time - not even your own awareness
-        // updates (which are updated every 15 seconds)
-        /** @type {WebSocket} */ (this.ws).close()
-      }
-    }, messageReconnectTimeout / 10))
+    
     if (connect) {
       this.connect()
     }
-  }
-
-  get url () {
-    const encodedParams = url.encodeQueryParams(this.params)
-    return this.serverUrl + '/' + this.roomname +
-      (encodedParams.length === 0 ? '' : '?' + encodedParams)
   }
 
   /**
@@ -437,15 +316,8 @@ export class WebsocketProvider extends Observable {
     }
   }
 
-  destroy () {
-    if (this._resyncInterval !== 0) {
-      clearInterval(this._resyncInterval)
-    }
-    clearInterval(this._checkInterval)
-    this.disconnect()
-    if (env.isNode && typeof process !== 'undefined') {
-      process.off('exit', this._exitHandler)
-    }
+  destroy () {   
+    this.disconnect()  
     this.awareness.off('update', this._awarenessUpdateHandler)
     this.doc.off('update', this._updateHandler)
     super.destroy()
@@ -514,16 +386,10 @@ export class WebsocketProvider extends Observable {
   disconnect () {
     this.shouldConnect = false
     this.disconnectBc()
-    if (this.ws !== null) {
-      this.ws.close()
-    }
   }
 
   connect () {
-    this.shouldConnect = true
-    if (!this.wsconnected && this.ws === null) {
-      //setupWS(this)
-      this.connectBc()
-    }
+    this.shouldConnect = true    
+    this.connectBc()
   }
 }
