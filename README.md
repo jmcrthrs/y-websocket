@@ -6,6 +6,11 @@
 
 Removed ModuleScopePlugin from `/Users/jamie/Documents/GitHub/my-app-5/node_modules/react-scripts/config/webpack.config.js`so we could import from outside ./src
 
+### debounce
+
+https://discuss.yjs.dev/t/y-websocket-debounce-broadcast-and-merge-updates/885/2
+
+
 ### Websocket Server
 
 When using the y-websocket server, the other user awareness shows when you load the app. This is because the y-websocket server stores the YDoc and sends the info to the client when it connects
