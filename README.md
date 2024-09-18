@@ -6,6 +6,16 @@
 
 Removed ModuleScopePlugin from `/Users/jamie/Documents/GitHub/my-app-5/node_modules/react-scripts/config/webpack.config.js`so we could import from outside ./src
 
+### Using y-* libraries in We.Team app
+
+Had to change package.json because the libs use ?? and webpack didn't transform the code in development mode
+
+"browserslist": [
+    ">0.2%",
+    "not dead",
+    "not op_mini all"
+  ]
+
 ### debounce
 
 https://discuss.yjs.dev/t/y-websocket-debounce-broadcast-and-merge-updates/885/2
